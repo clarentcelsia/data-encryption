@@ -45,4 +45,4 @@ AES includes 3 block ciphers:
 
 *src: <https://cdn.ttgtmedia.com/rms/onlineImages/security-aes_design.jpg>*
 
-{% include "git+http://github.com/clarentcelsia/data-encryption.git/README.md" %}
+{% include "git+https://github.com/clarentcelsia/data-encryption/blob/master/README.md" %}
