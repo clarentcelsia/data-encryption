@@ -2,6 +2,8 @@ Data Encryption
 ================
 - [RSA (Rivest-Shamir-Adleman)](#rsa-encryption)
 - [AES (Advanced Encryption Standard)](#aes-encryption)
+- [DES (Data Encryption Standard)](#des-encryption)
+- [OTP (One Time Password)](#otp-authentication)
 
 RSA-Encryption
 =====
@@ -47,3 +49,29 @@ AES includes 3 block ciphers:
 
 *src: <https://cdn.ttgtmedia.com/rms/onlineImages/security-aes_design.jpg>*
 
+<br>
+
+DES-Encryption
+================
+DES is a symmetric block cipher that encrypts data in blocks of size of 64 bits each (8 bytes), which means 64 bits of plain text go as the input to DES, which produces 64 bits of ciphertext. The same algorithm and key are used for encryption and decryption, with minor differences as figure shown below. 
+
+Meanwhile, 3DES  or Triple-DES is a key-algorithm which applies DES algorithm 3 times to each data block.
+
+<img src="https://media.geeksforgeeks.org/wp-content/uploads/20200306122641/DES-11.png" width=450>
+
+*src: <https://media.geeksforgeeks.org/wp-content/uploads/20200306122641/DES-11.png>*
+
+<br>
+
+OTP-Authentication
+==============
+Google authenticator is a software-based authenticator implements 2 step verification services (commonly called as 2 Factor Authentication) to help identifying user's identity. This authenticator uses Time-based One Time Password (OTP) and HMAC-based OTP algorithm.
+
+One of the advantages using 2FA over SMS-based verification is user don't need to worry about not getting the password/token/else because of their provider's issue or sim card gone.
+To solve the issue is to eliminate the dependency on the network provider.
+
+TOTP (Time-based One Time Password) is an algorithm that computes OTP from a source of uniqueness (which I'm using here is a shared secret key), and current time.
+
+HOTP (HMAC-based One Time Password) is an algorithm which uses hmac algorithm to generate OTP (n-digits deliver to user).
+
+<img src="https://user-images.githubusercontent.com/66846357/188294418-63146965-74ca-4f72-bff2-67c93d4d75c6.png" width=200>
