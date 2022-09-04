@@ -28,8 +28,6 @@ Signing asserts the authenticity of the data.
 RSA Signing often called "Signature" that is generated from the message using private key.
 User who wants to send the message have to send their signature as well signifies that the message actually came from the party by whom the public key is issued.
 
-<br/>
-
 AES-Encryption
 ==============
 AES is a symmetric key encryption algorithm where one key can be used to encrypt and decrypt the message.
