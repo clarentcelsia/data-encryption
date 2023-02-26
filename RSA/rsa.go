@@ -10,7 +10,10 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"os"
+
+	"golang.org/x/crypto/ssh"
 )
 
 func GeneratePrivPubKey() (*rsa.PrivateKey, rsa.PublicKey) {
@@ -25,13 +28,30 @@ func GeneratePrivPubKey() (*rsa.PrivateKey, rsa.PublicKey) {
 	return private_key, public_key
 }
 
+func GeneratePubKeyToByte(pubkey *rsa.PublicKey) ([]byte, error) {
+	public_key, err := ssh.NewPublicKey(pubkey)
+	if err != nil {
+		return nil, err
+	}
+	pubkeybytes := ssh.MarshalAuthorizedKey(public_key)
+	return pubkeybytes, nil
+}
+
+func WriteKeyToFile(keyBytes []byte, saveFileTo string) error {
+	err := ioutil.WriteFile(saveFileTo, keyBytes, 0600)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func ExportPEM() {
 	private_key, _ := GeneratePrivPubKey()
 
 	/* PEM Block
 	#Encode RSA key pair (i.e x509/etc.)
 		#Bytes : result of encoded key */
-	file, errFile := os.Create("FILE.pem")
+	file, errFile := os.Create("PRIV.pem")
 	if errFile != nil {
 		println("failed to create file")
 		panic(errFile)
@@ -41,12 +61,36 @@ func ExportPEM() {
 	pemPrivateBlockWithPass, _ := x509.EncryptPEMBlock(rand.Reader, "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(private_key), []byte("secret"), x509.PEMCipherAES128)
 
 	// pemPrivateBlock := &pem.Block{
-	// 	Type:  "RSA PRIVATE KEY",
-	// 	Bytes: x509.MarshalPKCS1PrivateKey(private_key),
+	// 	Type:    "RSA PRIVATE KEY",
+	// 	Headers: nil,
+	// 	Bytes:   x509.MarshalPKCS1PrivateKey(private_key),
 	// }
 
 	/* Encode block to file */
 	if errEncode := pem.Encode(file, pemPrivateBlockWithPass); errEncode != nil {
+		println("failed to encode pemblock to file")
+		os.Exit(1)
+	}
+
+	/* (Optional) save generated public key to another file or pem.
+	for pem can follow the previous instruction to encode and decode pem file*/
+	public_key_byt, errp := GeneratePubKeyToByte(&private_key.PublicKey)
+	if errp != nil {
+		println("failed to generate key to byte")
+		panic(errp)
+	}
+	WriteKeyToFile(public_key_byt, "PUBKEY.pub") // Save in another extension file
+
+	// Save key into pem block
+	pemPublicBlock := &pem.Block{
+		Type:    "RSA PUBLIC KEY",
+		Headers: nil,
+		Bytes:   x509.MarshalPKCS1PublicKey(&private_key.PublicKey),
+	}
+
+	pubfile, _ := os.Create("PUB.pem")
+	defer pubfile.Close()
+	if errEncode := pem.Encode(pubfile, pemPublicBlock); errEncode != nil {
 		println("failed to encode pemblock to file")
 		os.Exit(1)
 	}
@@ -65,6 +109,19 @@ func LoadPrivateKey(block *pem.Block, password string) (*rsa.PrivateKey, error) 
 	}
 
 	return x509.ParsePKCS1PrivateKey(block.Bytes)
+}
+
+func LoadPubKey(block *pem.Block, password string) (*rsa.PublicKey, error) {
+	if password != "" {
+		blockBytes, errDecrypt := x509.DecryptPEMBlock(block, []byte(password))
+		if errDecrypt != nil {
+			println("failed to decrypt block")
+			panic(errDecrypt)
+		}
+		return x509.ParsePKCS1PublicKey(blockBytes)
+	}
+
+	return x509.ParsePKCS1PublicKey(block.Bytes)
 }
 
 func ImportPEM(filename, password string) (*rsa.PrivateKey, rsa.PublicKey) {
@@ -94,6 +151,35 @@ func ImportPEM(filename, password string) (*rsa.PrivateKey, rsa.PublicKey) {
 	}
 
 	return private_key, private_key.PublicKey
+}
+
+func ImportPUBPEM(filename, password string) *rsa.PublicKey {
+	file, err := os.Open(filename)
+	defer file.Close()
+
+	if err != nil {
+		println("failed to open file")
+		os.Exit(1)
+	}
+
+	fileInfo, _ := file.Stat()
+	pemByts := make([]byte, fileInfo.Size())
+
+	buffer := bufio.NewReader(file)
+	if _, errReading := buffer.Read(pemByts); errReading != nil {
+		println("failed to read file")
+		panic(errReading)
+	}
+
+	/* Decode the content of file(block(key)) */
+	block, _ := pem.Decode(pemByts)
+	pub_key, errLoad := LoadPubKey(block, password)
+	if errLoad != nil {
+		println("failed to load key")
+		os.Exit(1)
+	}
+
+	return pub_key
 }
 
 func Encrypt(data string) []byte {
@@ -129,7 +215,7 @@ func Decrypt(encryptedFiles []byte, pass string) string {
 var message = "this is message owned by user1 for user2"
 
 func Signing() string {
-	private_key, _ := ImportPEM("FILE.pem", "secret")
+	private_key, _ := ImportPEM("PRIV.pem", "secret")
 
 	/* Message will be hashed -> cipher text */
 	msgHasher := sha256.New()
@@ -149,7 +235,8 @@ func Signing() string {
 }
 
 func Verify() bool {
-	_, public_key := ImportPEM("FILE.pem", "secret")
+	//_, public_key := ImportPEM("PRIV.pem", "") // OR
+	public_key := ImportPUBPEM("PUB.pem", "")
 
 	signature := Signing()
 	signBytes, _ := base64.StdEncoding.DecodeString(signature)
@@ -159,7 +246,7 @@ func Verify() bool {
 	msgBytes := msgHasher.Sum(nil)
 
 	/* This verifies the incoming signature */
-	if err := rsa.VerifyPKCS1v15(&public_key, crypto.SHA256, msgBytes, signBytes); err != nil {
+	if err := rsa.VerifyPKCS1v15(public_key, crypto.SHA256, msgBytes, signBytes); err != nil {
 		return false
 	}
 	return true
@@ -168,9 +255,9 @@ func Verify() bool {
 func main() {
 	ExportPEM()
 
-	data := "hello"
+	data := "clientid|timestamp"
 	dataByts := Encrypt(data)
-	originalFile := Decrypt(dataByts, "")
+	originalFile := Decrypt(dataByts, "secret")
 	println(originalFile)
 
 	fmt.Printf("isVerified: %v", Verify())
