@@ -9,7 +9,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -58,32 +57,32 @@ func ExportPEM() {
 	}
 
 	/* Inside block where the encoded key is put */
-	pemPrivateBlockWithPass, _ := x509.EncryptPEMBlock(rand.Reader, "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(private_key), []byte("secret"), x509.PEMCipherAES128)
+	// pemPrivateBlockWithPass, _ := x509.EncryptPEMBlock(rand.Reader, "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(private_key), []byte("secret"), x509.PEMCipherAES128)
 
-	// pemPrivateBlock := &pem.Block{
-	// 	Type:    "RSA PRIVATE KEY",
-	// 	Headers: nil,
-	// 	Bytes:   x509.MarshalPKCS1PrivateKey(private_key),
-	// }
+	pemPrivateBlock := &pem.Block{
+		Type:    "RSA PRIVATE KEY",
+		Headers: nil,
+		Bytes:   x509.MarshalPKCS1PrivateKey(private_key),
+	}
 
 	/* Encode block to file */
-	if errEncode := pem.Encode(file, pemPrivateBlockWithPass); errEncode != nil {
+	if errEncode := pem.Encode(file, pemPrivateBlock); errEncode != nil {
 		println("failed to encode pemblock to file")
 		os.Exit(1)
 	}
 
 	/* (Optional) save generated public key to another file or pem.
 	for pem can follow the previous instruction to encode and decode pem file*/
-	public_key_byt, errp := GeneratePubKeyToByte(&private_key.PublicKey)
-	if errp != nil {
-		println("failed to generate key to byte")
-		panic(errp)
-	}
-	WriteKeyToFile(public_key_byt, "PUBKEY.pub") // Save in another extension file
+	// public_key_byt, errp := GeneratePubKeyToByte(&private_key.PublicKey)
+	// if errp != nil {
+	// 	println("failed to generate key to byte")
+	// 	panic(errp)
+	// }
+	// WriteKeyToFile(public_key_byt, "PUBKEY.pub") // Save in another extension file
 
 	// Save key into pem block
 	pemPublicBlock := &pem.Block{
-		Type:    "RSA PUBLIC KEY",
+		Type:    "PUBLIC KEY",
 		Headers: nil,
 		Bytes:   x509.MarshalPKCS1PublicKey(&private_key.PublicKey),
 	}
@@ -252,13 +251,13 @@ func Verify() bool {
 	return true
 }
 
-func main() {
+func mainS() {
 	ExportPEM()
 
-	data := "clientid|timestamp"
-	dataByts := Encrypt(data)
-	originalFile := Decrypt(dataByts, "secret")
-	println(originalFile)
+	// data := "clientid|timestamp"
+	// dataByts := Encrypt(data)
+	// originalFile := Decrypt(dataByts, "secret")
+	// println(originalFile)
 
-	fmt.Printf("isVerified: %v", Verify())
+	// fmt.Printf("isVerified: %v", Verify())
 }

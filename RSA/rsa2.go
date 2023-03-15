@@ -29,7 +29,7 @@ func main() {
 		return
 	}
 
-	file, err := os.Create("PUBTEST.pem")
+	file, err := os.Create("ENCPUB.pem")
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -40,7 +40,7 @@ func main() {
 		Bytes: pubkeybytes,
 	})
 
-	privfile, err := os.Create("PRIVTEST.pem")
+	privfile, err := os.Create("ENCPRIV.pem")
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -48,11 +48,12 @@ func main() {
 	defer privfile.Close()
 
 	privkeybytes, err := x509.MarshalPKCS8PrivateKey(privkey)
-	pemPrivateBlock := &pem.Block{
-		Type:    "PRIVATE KEY",
-		Headers: nil,
-		Bytes:   privkeybytes,
-	}
+	pemPrivateBlock, _ := x509.EncryptPEMBlock(rand.Reader, "ENCRYPTED PRIVATE KEY", privkeybytes, []byte("secret"), x509.PEMCipherAES256)
+	// pemPrivateBlock := &pem.Block{
+	// 	Type:    "PRIVATE KEY",
+	// 	Headers: nil,
+	// 	Bytes:   privkeybytes,
+	// }
 	/* Encode block to file */
 	if errEncode := pem.Encode(privfile, pemPrivateBlock); errEncode != nil {
 		println("failed to encode pemblock to file")
